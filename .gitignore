@@ -20,6 +20,7 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+.claude/
 
 # OS
 .DS_Store
