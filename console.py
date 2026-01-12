@@ -5,12 +5,14 @@ from PySide6.QtWidgets import (
     QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel
 )
 from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QTextCursor
 from openai import OpenAI
 
 
 class ChatWorker(QThread):
-    """Worker thread to handle OpenAI API calls without blocking the GUI."""
-    response_ready = Signal(str)
+    """Worker thread to handle OpenAI API calls with streaming."""
+    chunk_received = Signal(str)
+    stream_finished = Signal(str)
     error_occurred = Signal(str)
 
     def __init__(self, client, messages):
@@ -20,11 +22,18 @@ class ChatWorker(QThread):
 
     def run(self):
         try:
-            response = self.client.chat.completions.create(
+            stream = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=self.messages
+                messages=self.messages,
+                stream=True
             )
-            self.response_ready.emit(response.choices[0].message.content)
+            full_response = ""
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    full_response += content
+                    self.chunk_received.emit(content)
+            self.stream_finished.emit(full_response)
         except Exception as e:
             self.error_occurred.emit(str(e))
 
@@ -42,6 +51,9 @@ class ConsoleWindow(QMainWindow):
         self.messages = [
             {"role": "system", "content": "You are a helpful assistant."}
         ]
+
+        # Track if we're currently streaming
+        self.is_streaming = False
 
         # Central widget and layout
         central_widget = QWidget()
@@ -104,25 +116,40 @@ class ConsoleWindow(QMainWindow):
         self.set_input_enabled(False)
         self.status_label.setText("Thinking...")
 
+        # Prepare for streaming response
+        self.output_area.append("<b>Assistant:</b> ")
+        self.is_streaming = True
+
         # Start worker thread
         self.worker = ChatWorker(self.client, self.messages.copy())
-        self.worker.response_ready.connect(self.handle_response)
+        self.worker.chunk_received.connect(self.handle_chunk)
+        self.worker.stream_finished.connect(self.handle_stream_finished)
         self.worker.error_occurred.connect(self.handle_error)
         self.worker.start()
 
-    def handle_response(self, response):
-        """Handle the response from OpenAI."""
-        self.output_area.append(f"<b>Assistant:</b> {response}")
+    def handle_chunk(self, chunk):
+        """Handle a streaming chunk from OpenAI."""
+        cursor = self.output_area.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertText(chunk)
+        self.output_area.setTextCursor(cursor)
+        self.output_area.ensureCursorVisible()
+        self.status_label.setText("Streaming...")
+
+    def handle_stream_finished(self, full_response):
+        """Handle the completion of the stream."""
+        self.is_streaming = False
         self.output_area.append("")  # Add spacing
 
         # Add to conversation history
-        self.messages.append({"role": "assistant", "content": response})
+        self.messages.append({"role": "assistant", "content": full_response})
 
         self.set_input_enabled(True)
         self.status_label.setText("Ready")
 
     def handle_error(self, error):
         """Handle errors from the API call."""
+        self.is_streaming = False
         self.output_area.append(f"<b style='color: red;'>Error:</b> {error}")
         self.output_area.append("")
 
