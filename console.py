@@ -2,7 +2,7 @@ import sys
 import os
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel
+    QTextEdit, QLineEdit, QPushButton, QHBoxLayout, QLabel, QGroupBox
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QTextCursor
@@ -42,10 +42,10 @@ class ConsoleWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Console - OpenAI Chat")
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(900, 700)
 
-        # Initialize OpenAI client
-        self.client = OpenAI()
+        # OpenAI client (initialized when API key is set)
+        self.client = None
 
         # Conversation history
         self.messages = [
@@ -59,6 +59,28 @@ class ConsoleWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
+
+        # API Key section
+        api_group = QGroupBox("API Configuration")
+        api_layout = QHBoxLayout(api_group)
+
+        api_layout.addWidget(QLabel("OpenAI API Key:"))
+
+        self.api_key_field = QLineEdit()
+        self.api_key_field.setPlaceholderText("Enter your OpenAI API key...")
+        self.api_key_field.setEchoMode(QLineEdit.Password)
+        self.api_key_field.returnPressed.connect(self.set_api_key)
+        api_layout.addWidget(self.api_key_field)
+
+        self.api_key_button = QPushButton("Set Key")
+        self.api_key_button.clicked.connect(self.set_api_key)
+        api_layout.addWidget(self.api_key_button)
+
+        self.api_status_label = QLabel("Not connected")
+        self.api_status_label.setStyleSheet("color: red;")
+        api_layout.addWidget(self.api_status_label)
+
+        layout.addWidget(api_group)
 
         # Status label
         self.status_label = QLabel("Ready")
@@ -99,8 +121,52 @@ class ConsoleWindow(QMainWindow):
 
         self.worker = None
 
+        # Disable chat until API key is set
+        self.set_chat_enabled(False)
+
+        # Check for existing API key in environment
+        if os.environ.get("OPENAI_API_KEY"):
+            self.api_key_field.setText("********")
+            self.client = OpenAI()
+            self.api_status_label.setText("Connected (from environment)")
+            self.api_status_label.setStyleSheet("color: green;")
+            self.set_chat_enabled(True)
+
+    def set_api_key(self):
+        """Set the OpenAI API key and initialize the client."""
+        api_key = self.api_key_field.text().strip()
+        if not api_key or api_key == "********":
+            return
+
+        try:
+            self.client = OpenAI(api_key=api_key)
+            # Test the key with a minimal request
+            self.client.models.list()
+            self.api_status_label.setText("Connected")
+            self.api_status_label.setStyleSheet("color: green;")
+            self.api_key_field.setText("********")
+            self.set_chat_enabled(True)
+            self.output_area.append("<i>API key set successfully.</i>")
+            self.output_area.append("")
+        except Exception as e:
+            self.api_status_label.setText("Invalid key")
+            self.api_status_label.setStyleSheet("color: red;")
+            self.output_area.append(f"<b style='color: red;'>API Error:</b> {e}")
+            self.output_area.append("")
+            self.client = None
+            self.set_chat_enabled(False)
+
+    def set_chat_enabled(self, enabled):
+        """Enable or disable chat controls."""
+        self.input_field.setEnabled(enabled)
+        self.submit_button.setEnabled(enabled)
+
     def process_input(self):
         """Process the input and send to OpenAI."""
+        if not self.client:
+            self.output_area.append("<b style='color: red;'>Error:</b> Please set your API key first.")
+            return
+
         text = self.input_field.text().strip()
         if not text:
             return
@@ -113,7 +179,7 @@ class ConsoleWindow(QMainWindow):
         self.messages.append({"role": "user", "content": text})
 
         # Disable input while processing
-        self.set_input_enabled(False)
+        self.set_chat_enabled(False)
         self.status_label.setText("Thinking...")
 
         # Prepare for streaming response
@@ -144,7 +210,7 @@ class ConsoleWindow(QMainWindow):
         # Add to conversation history
         self.messages.append({"role": "assistant", "content": full_response})
 
-        self.set_input_enabled(True)
+        self.set_chat_enabled(True)
         self.status_label.setText("Ready")
 
     def handle_error(self, error):
@@ -157,13 +223,8 @@ class ConsoleWindow(QMainWindow):
         if self.messages and self.messages[-1]["role"] == "user":
             self.messages.pop()
 
-        self.set_input_enabled(True)
+        self.set_chat_enabled(True)
         self.status_label.setText("Error - Ready to retry")
-
-    def set_input_enabled(self, enabled):
-        """Enable or disable input controls."""
-        self.input_field.setEnabled(enabled)
-        self.submit_button.setEnabled(enabled)
 
     def clear_output(self):
         """Clear the output area."""
