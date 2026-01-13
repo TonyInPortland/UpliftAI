@@ -144,9 +144,9 @@ class ConsoleWindow(QMainWindow):
         layout.addWidget(uplift_details_label)
 
         self.uplift_details_area = QTextEdit()
-        self.uplift_details_area.setReadOnly(True)
-        self.uplift_details_area.setPlaceholderText("Uplift API response will appear here...")
+        self.uplift_details_area.setPlaceholderText("Paste or enter Uplift details here...")
         self.uplift_details_area.setMaximumHeight(150)
+        self.uplift_details_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         layout.addWidget(self.uplift_details_area)
 
         # Status label
