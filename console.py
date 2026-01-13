@@ -62,23 +62,80 @@ class ConsoleWindow(QMainWindow):
 
         # API Key section
         api_group = QGroupBox("API Configuration")
-        api_layout = QHBoxLayout(api_group)
+        api_group_layout = QVBoxLayout(api_group)
+        api_group_layout.setSpacing(5)
 
-        api_layout.addWidget(QLabel("OpenAI API Key:"))
+        # OpenAI API Key row
+        openai_layout = QHBoxLayout()
+
+        openai_label = QLabel("OpenAI API Key:")
+        openai_label.setFixedWidth(120)
+        openai_layout.addWidget(openai_label)
 
         self.api_key_field = QLineEdit()
         self.api_key_field.setPlaceholderText("Enter your OpenAI API key...")
         self.api_key_field.setEchoMode(QLineEdit.Password)
+        self.api_key_field.setMinimumWidth(300)
         self.api_key_field.returnPressed.connect(self.set_api_key)
-        api_layout.addWidget(self.api_key_field)
+        openai_layout.addWidget(self.api_key_field)
 
         self.api_key_button = QPushButton("Set Key")
+        self.api_key_button.setFixedWidth(80)
         self.api_key_button.clicked.connect(self.set_api_key)
-        api_layout.addWidget(self.api_key_button)
+        openai_layout.addWidget(self.api_key_button)
 
         self.api_status_label = QLabel("Not connected")
+        self.api_status_label.setFixedWidth(180)
         self.api_status_label.setStyleSheet("color: red;")
-        api_layout.addWidget(self.api_status_label)
+        openai_layout.addWidget(self.api_status_label)
+
+        api_group_layout.addLayout(openai_layout)
+
+        # Uplift User row
+        uplift_user_layout = QHBoxLayout()
+
+        uplift_user_label = QLabel("Uplift User:")
+        uplift_user_label.setFixedWidth(120)
+        uplift_user_layout.addWidget(uplift_user_label)
+
+        self.uplift_user_field = QLineEdit()
+        self.uplift_user_field.setPlaceholderText("Enter your Uplift username...")
+        self.uplift_user_field.setMinimumWidth(300)
+        uplift_user_layout.addWidget(self.uplift_user_field)
+
+        self.uplift_user_button = QPushButton("Set User")
+        self.uplift_user_button.setFixedWidth(80)
+        uplift_user_layout.addWidget(self.uplift_user_button)
+
+        self.uplift_user_status_label = QLabel("")
+        self.uplift_user_status_label.setFixedWidth(180)
+        uplift_user_layout.addWidget(self.uplift_user_status_label)
+
+        api_group_layout.addLayout(uplift_user_layout)
+
+        # Uplift API Key row
+        uplift_layout = QHBoxLayout()
+
+        uplift_label = QLabel("Uplift API Key:")
+        uplift_label.setFixedWidth(120)
+        uplift_layout.addWidget(uplift_label)
+
+        self.uplift_key_field = QLineEdit()
+        self.uplift_key_field.setPlaceholderText("Enter your Uplift API key...")
+        self.uplift_key_field.setEchoMode(QLineEdit.Password)
+        self.uplift_key_field.setMinimumWidth(300)
+        uplift_layout.addWidget(self.uplift_key_field)
+
+        self.uplift_key_button = QPushButton("Set Key")
+        self.uplift_key_button.setFixedWidth(80)
+        uplift_layout.addWidget(self.uplift_key_button)
+
+        self.uplift_status_label = QLabel("Not connected")
+        self.uplift_status_label.setFixedWidth(180)
+        self.uplift_status_label.setStyleSheet("color: red;")
+        uplift_layout.addWidget(self.uplift_status_label)
+
+        api_group_layout.addLayout(uplift_layout)
 
         layout.addWidget(api_group)
 
