@@ -139,14 +139,25 @@ class ConsoleWindow(QMainWindow):
 
         layout.addWidget(api_group)
 
+        # Uplift Details section
+        uplift_details_label = QLabel("Uplift Details:")
+        layout.addWidget(uplift_details_label)
+
+        self.uplift_details_area = QTextEdit()
+        self.uplift_details_area.setReadOnly(True)
+        self.uplift_details_area.setPlaceholderText("Uplift API response will appear here...")
+        self.uplift_details_area.setMaximumHeight(150)
+        layout.addWidget(self.uplift_details_area)
+
         # Status label
         self.status_label = QLabel("Ready")
         layout.addWidget(self.status_label)
 
-        # Output area
+        # Output area (chat)
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
         self.output_area.setPlaceholderText("Chat will appear here...")
+        self.output_area.setMaximumHeight(200)
         layout.addWidget(self.output_area)
 
         # Input area
